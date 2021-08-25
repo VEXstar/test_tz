@@ -1,5 +1,6 @@
 package ru.dromran.testtz.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import javax.persistence.*;
@@ -15,21 +16,34 @@ public class EmployeeEntity implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "employee_id", nullable = false)
-    private Long employeeId;
+    private Long id;
 
     @Column(name = "employee_first_name", nullable = false)
-    private String employeeFirstName;
+    private String firstName;
 
     @Column(name = "employee_last_name", nullable = false)
-    private String employeeLastName;
+    private String lastName;
 
     @Column(name = "employee_middle_name", nullable = false)
-    private String employeeMiddleName;
+    private String middleName;
 
-    @Column(name = "employee_post", nullable = false)
-    private Long employeePost;
+    @Column(name = "employee_login", nullable = false)
+    private String login;
+
+    @Column(name = "employee_role", nullable = false)
+    private String role;
+
+    @ManyToOne
+    @JoinColumn(name = "employee_post", nullable = false)
+    private PostEntity post;
 
     @Column(name = "employee_password", nullable = false)
-    private String employeePassword;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private String password;
+
+    @ManyToOne
+    @JoinTable(name = "employee_department", joinColumns = @JoinColumn(name = "employee_department_employee_id"),
+            inverseJoinColumns = @JoinColumn(name = "employee_department_department_id"))
+    private DepartmentEntity department;
 
 }

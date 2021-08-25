@@ -1,9 +1,11 @@
 package ru.dromran.testtz.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 
 import javax.persistence.*;
 import java.io.Serializable;
+import java.util.List;
 
 @Data
 @Entity
@@ -15,21 +17,35 @@ public class DepartmentEntity implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "department_id", nullable = false)
-    private Long departmentId;
+    private Long id;
 
     @Column(name = "department_name", nullable = false)
-    private String departmentName;
+    private String name;
 
     @Column(name = "department_phone", nullable = false)
-    private String departmentPhone;
+    private String phone;
 
     @Column(name = "department_mail", nullable = false)
-    private String departmentMail;
+    private String mail;
 
-    @Column(name = "department_organization_id", nullable = false)
-    private Long departmentOrganizationId;
+    @Column(name = "department_organization_id")
+    private Long organizationId;
 
+    @JsonIgnore
     @Column(name = "department_chef_id")
-    private Long departmentChefId;
+    private Long chefId;
+
+    @ManyToOne
+    @JoinColumn(name = "department_organization_id", referencedColumnName = "organization_id", insertable = false,
+            updatable = false)
+    private OrganizationEntity organization;
+
+    @ManyToOne
+    @JoinColumn(name = "department_chef_id", referencedColumnName = "employee_id", insertable = false,
+            updatable = false)
+    private EmployeeEntity chef;
+
+    @OneToMany(mappedBy = "department")
+    private List<EmployeeEntity> employeeEntities;
 
 }

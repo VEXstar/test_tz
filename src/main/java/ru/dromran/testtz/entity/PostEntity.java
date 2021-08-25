@@ -4,6 +4,7 @@ import lombok.Data;
 
 import javax.persistence.*;
 import java.io.Serializable;
+import java.util.List;
 
 @Data
 @Entity
@@ -19,5 +20,8 @@ public class PostEntity implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "post_id", nullable = false)
     private Long postId;
+
+    @OneToMany(mappedBy = "post")
+    private List<EmployeeEntity> employeeEntityList;
 
 }

@@ -4,6 +4,7 @@ import lombok.Data;
 
 import javax.persistence.*;
 import java.io.Serializable;
+import java.util.List;
 
 @Data
 @Entity
@@ -15,18 +16,25 @@ public class OrganizationEntity implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "organization_id", nullable = false)
-    private Long organizationId;
+    private Long id;
 
     @Column(name = "organization_name", nullable = false)
-    private String organizationName;
+    private String name;
 
     @Column(name = "organization_physical_address", nullable = false)
-    private String organizationPhysicalAddress;
+    private String physicalAddress;
 
     @Column(name = "organization_legal_address", nullable = false)
-    private String organizationLegalAddress;
+    private String legalAddress;
 
     @Column(name = "organization_chef")
-    private Long organizationChef;
+    private Long chefId;
+
+    @ManyToOne
+    @JoinColumn(name = "organization_chef", referencedColumnName = "employee_id", insertable = false, updatable = false)
+    private EmployeeEntity chef;
+
+    @OneToMany(mappedBy = "organization")
+    private List<DepartmentEntity> departmentEntityList;
 
 }
