@@ -24,8 +24,6 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.csrf().disable()
-                .authorizeRequests()
-                .and()
                 .addFilterBefore(new SecurityFilter(), BasicAuthenticationFilter.class)
                 .sessionManagement()
                 .sessionFixation()

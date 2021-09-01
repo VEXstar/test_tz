@@ -1,27 +1,30 @@
 package ru.dromran.testtz.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import org.hibernate.Hibernate;
 import ru.dromran.testtz.entity.composite.ExecutorAssignmentId;
 
 import javax.persistence.*;
 import java.io.Serializable;
+import java.util.Objects;
 
-@Data
+@Getter
+@Setter
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@RequiredArgsConstructor
 @Entity
 @Table(name = "executor_assignment")
-@IdClass(ExecutorAssignmentId.class)
 public class ExecutorAssignmentEntity implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    @Id
-    @Column(name = "executor_user_id", nullable = false)
-    private Long executorUserId;
+    @EmbeddedId
+    ExecutorAssignmentId executorAssignmentId;
 
-    @Id
-    @Column(name = "executor_assignment_id", nullable = false)
-    private Long executorAssignmentId;
 
     @Column(name = "executor_check")
     private Boolean isDone;
@@ -37,5 +40,16 @@ public class ExecutorAssignmentEntity implements Serializable {
     @JoinColumn(name = "executor_assignment_id", referencedColumnName = "assignment_id")
     private AssignmentEntity assignment;
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false;
+        ExecutorAssignmentEntity that = (ExecutorAssignmentEntity) o;
 
+        if (!Objects.equals(executorAssignmentId.getExecutorUserId(),
+                that.executorAssignmentId.getExecutorAssignmentId()))
+            return false;
+        return Objects.equals(executorAssignmentId.getExecutorAssignmentId(),
+                that.executorAssignmentId.getExecutorAssignmentId());
+    }
 }

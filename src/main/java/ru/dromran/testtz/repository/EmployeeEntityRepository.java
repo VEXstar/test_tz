@@ -10,7 +10,7 @@ import ru.dromran.testtz.entity.PostEntity;
 public interface EmployeeEntityRepository extends
         JpaRepository<EmployeeEntity, Long>, JpaSpecificationExecutor<EmployeeEntity> {
 
-    EmployeeEntity getEmployeeEntityByLogin(String login);
+    EmployeeEntity findEmployeeEntitiesByLogin(String login);
 
     Page<EmployeeEntity>
     findEmployeeEntitiesByFirstNameContainingAndLastNameContainingAndMiddleNameContainingAndLoginAndPost(

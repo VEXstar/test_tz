@@ -70,7 +70,7 @@ public class AuthService {
 
     public EmployeeEntity loginUser(LoginFormDTO loginFormDTO) {
         EmployeeEntity employee =
-                employeeEntityRepository.getEmployeeEntityByLogin(loginFormDTO.getLogin());
+                employeeEntityRepository.findEmployeeEntitiesByLogin(loginFormDTO.getLogin());
         if (employee == null || !passwordEncoder.matches(loginFormDTO.getPassword(), employee.getPassword())) {
             NotFoundException notFoundException = new NotFoundException("Pair login and password not found");
             log.error("Failed attempt to log in to account", notFoundException);

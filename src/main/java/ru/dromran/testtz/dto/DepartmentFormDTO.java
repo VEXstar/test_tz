@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
 
 @Data
 @AllArgsConstructor
@@ -20,9 +21,9 @@ public class DepartmentFormDTO {
     @NotEmpty(message = "field mail cant be empty")
     private String mail;
 
-    @NotEmpty(message = "field organizationId cant be empty")
+    @NotNull(message = "field organizationId cant be empty")
     private Long organizationId;
 
-    @NotEmpty(message = "field chefId cant be empty")
+    @NotNull(message = "field chefId cant be empty")
     private Long chefId;
 }

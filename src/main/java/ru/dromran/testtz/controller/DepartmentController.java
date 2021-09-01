@@ -16,7 +16,7 @@ import static ru.dromran.testtz.constants.RoleConstants.ADMIN_ROLE;
 import static ru.dromran.testtz.constants.RoleConstants.USER_ROLE;
 
 @RestController
-@RequestMapping("/api/post")
+@RequestMapping("/api/department")
 @Secured({USER_ROLE, ADMIN_ROLE})
 public class DepartmentController {
 

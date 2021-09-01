@@ -27,7 +27,7 @@ public class UserFormDTO {
     private String role;
 
     @NotNull(message = "field postId cant be empty")
-    private Integer postId;
+    private Long postId;
 
     @NotNull(message = "field departmentId cant be empty")
     private Long departmentId;

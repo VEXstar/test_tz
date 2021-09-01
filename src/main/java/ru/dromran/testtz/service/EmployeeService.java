@@ -11,16 +11,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.dromran.testtz.dto.ResponseMessageDTO;
 import ru.dromran.testtz.dto.UserFormDTO;
-import ru.dromran.testtz.entity.*;
+import ru.dromran.testtz.entity.DepartmentEntity;
+import ru.dromran.testtz.entity.EmployeeDepartmentEntity;
+import ru.dromran.testtz.entity.EmployeeEntity;
+import ru.dromran.testtz.entity.PostEntity;
 import ru.dromran.testtz.entity.composite.EmployeeDepartmentId;
 import ru.dromran.testtz.exception.BadRequestException;
 import ru.dromran.testtz.exception.ForbiddenRequestException;
 import ru.dromran.testtz.exception.NotFoundException;
 import ru.dromran.testtz.repository.*;
 
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 import static ru.dromran.testtz.constants.RoleConstants.ADMIN_ROLE;
 
@@ -81,6 +84,15 @@ public class EmployeeService {
             throw notFoundException;
         }
 
+        EmployeeEntity employeeEntityByLogin =
+                employeeEntityRepository.findEmployeeEntitiesByLogin(userFormDTO.getLogin());
+
+        if (employeeEntityByLogin != null) {
+            BadRequestException badRequestException = new BadRequestException("Login already used");
+            log.error("Try create user with used login", badRequestException);
+            throw badRequestException;
+        }
+
         EmployeeEntity employee = new EmployeeEntity();
         employee.setFirstName(userFormDTO.getFirstName());
         employee.setLastName(userFormDTO.getLastName());
@@ -91,8 +103,7 @@ public class EmployeeService {
         employee.setRole(userFormDTO.getRole());
         EmployeeEntity save = employeeEntityRepository.save(employee);
         EmployeeDepartmentEntity ede = new EmployeeDepartmentEntity();
-        ede.setEmployeeDepartmentEmployeeId(save.getId());
-        ede.setEmployeeDepartmentDepartmentId(depForEmployee.getId());
+        ede.setEmployeeDepartmentId(new EmployeeDepartmentId(depForEmployee.getId(), save.getId()));
         employeeDepartmentEntityRepository.save(ede);
         return save;
     }
@@ -107,7 +118,7 @@ public class EmployeeService {
     public Page<EmployeeEntity> findUsers(String firstNameTerm,
                                           String lastNameTerm,
                                           String middleNameTerm,
-                                          Integer postId,
+                                          Long postId,
                                           Long departmentId,
                                           Long organizationId,
                                           String login,
@@ -117,60 +128,21 @@ public class EmployeeService {
         int realSize = pageSize == null ? 10 : pageSize;
 
         Pageable pageable = PageRequest.of(realPage, realSize);
-        PostEntity post = postEntityRepository.getById(postId);
 
-        if (departmentId == null && organizationId == null) {
-            return employeeEntityRepository
-                    .findEmployeeEntitiesByFirstNameContainingAndLastNameContainingAndMiddleNameContainingAndLoginAndPost(
-                            firstNameTerm, lastNameTerm, middleNameTerm, login, post, pageable);
-        } else if (departmentId != null) {
-            DepartmentEntity department = departmentEntityRepository.findById(departmentId).orElse(null);
+        List<EmployeeEntity> filtered = employeeEntityRepository.findAll().parallelStream().filter(employee -> {
+            boolean fNameCheck = compareTerms(employee.getFirstName(), firstNameTerm);
+            boolean mNameCheck = compareTerms(employee.getMiddleName(), middleNameTerm);
+            boolean lNameCheck = compareTerms(employee.getLastName(), lastNameTerm);
+            boolean postCheck = postId == null || employee.getPost().getPostId().equals(postId);
+            boolean depCheck = departmentId == null || employee.getDepartment().getId().equals(departmentId);
+            boolean orgCheck = organizationId == null || employee.getDepartment().getOrganizationId().equals(organizationId);
+            boolean loginCheck = compareTerms(employee.getLogin(), login);
+            return fNameCheck && mNameCheck && lNameCheck && postCheck && depCheck && orgCheck && loginCheck;
+        }).collect(Collectors.toList());
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), filtered.size());
 
-            if (department == null) {
-                NotFoundException notFoundException = new NotFoundException("Department not found");
-                log.error("Cant found department", notFoundException);
-                throw notFoundException;
-            }
-
-            List<EmployeeEntity> filtered = new LinkedList<>();
-            department.getEmployeeEntities().forEach(employee -> {
-                if (
-                        compareTerms(employee.getFirstName(), firstNameTerm) &&
-                                compareTerms(employee.getLastName(), lastNameTerm) &&
-                                compareTerms(employee.getMiddleName(), middleNameTerm) &&
-                                compareTerms(employee.getLogin(), login)) {
-                    filtered.add(employee);
-                }
-            });
-            int start = (int) pageable.getOffset();
-            int end = Math.min((start + pageable.getPageSize()), filtered.size());
-
-            return new PageImpl<>(filtered.subList(start, end), pageable, filtered.size());
-        } else {
-            OrganizationEntity organization = organizationEntityRepository.findById(organizationId).orElse(null);
-
-            if (organization == null) {
-                NotFoundException notFoundException = new NotFoundException("Organization not found");
-                log.error("Cant found organization", notFoundException);
-                throw notFoundException;
-            }
-            List<EmployeeEntity> filtered = new LinkedList<>();
-            organization.getDepartmentEntityList().forEach(departmentEntity ->
-                    departmentEntity.getEmployeeEntities().forEach(employee -> {
-                        if (
-                                compareTerms(employee.getFirstName(), firstNameTerm) &&
-                                        compareTerms(employee.getLastName(), lastNameTerm) &&
-                                        compareTerms(employee.getMiddleName(), middleNameTerm) &&
-                                        compareTerms(employee.getLogin(), login)) {
-                            filtered.add(employee);
-                        }
-                    })
-            );
-            int start = (int) pageable.getOffset();
-            int end = Math.min((start + pageable.getPageSize()), filtered.size());
-
-            return new PageImpl<>(filtered.subList(start, end), pageable, filtered.size());
-        }
+        return new PageImpl<>(filtered.subList(start, end), pageable, filtered.size());
     }
 
     public EmployeeEntity getById(Long id) {
@@ -186,7 +158,7 @@ public class EmployeeService {
     public EmployeeEntity updateUser(Long id, UserFormDTO userFormDTO) {
         EmployeeEntity userBySession = authService.getUserBySession();
         EmployeeEntity userById = employeeEntityRepository.findById(id).orElse(null);
-        EmployeeEntity employeeEntityByLogin = employeeEntityRepository.getEmployeeEntityByLogin(userFormDTO.getLogin());
+        EmployeeEntity employeeEntityByLogin = employeeEntityRepository.findEmployeeEntitiesByLogin(userFormDTO.getLogin());
 
         if (userById == null) {
             NotFoundException notFoundException = new NotFoundException("User not found");
@@ -253,8 +225,8 @@ public class EmployeeService {
                 employeeDepartmentEntityRepository.delete(employeeDepartment);
                 employeeDepartment = new EmployeeDepartmentEntity();
 
-                employeeDepartment.setEmployeeDepartmentEmployeeId(userById.getId());
-                employeeDepartment.setEmployeeDepartmentDepartmentId(department.getId());
+                employeeDepartment.setEmployeeDepartmentId(new EmployeeDepartmentId(department.getId(),
+                        userById.getId()));
 
                 employeeDepartmentEntityRepository.save(employeeDepartment);
             }

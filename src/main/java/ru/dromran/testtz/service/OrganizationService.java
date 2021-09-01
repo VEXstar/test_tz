@@ -3,6 +3,7 @@ package ru.dromran.testtz.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,10 @@ import ru.dromran.testtz.exception.ForbiddenRequestException;
 import ru.dromran.testtz.exception.NotFoundException;
 import ru.dromran.testtz.repository.EmployeeEntityRepository;
 import ru.dromran.testtz.repository.OrganizationEntityRepository;
+
+import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
 
 import static ru.dromran.testtz.constants.RoleConstants.ADMIN_ROLE;
 
@@ -66,6 +71,11 @@ public class OrganizationService {
         return organizationEntityRepository.save(organizationEntity);
     }
 
+    private boolean compareTerms(String string, String subString) {
+        String toCheck = subString == null ? "" : subString.toLowerCase(Locale.ROOT);
+        return string.toLowerCase(Locale.ROOT).contains(toCheck) || toCheck.contains(string.toLowerCase(Locale.ROOT));
+    }
+
     public Page<OrganizationEntity> findOrganizations(Integer page,
                                                       Integer pageSize,
                                                       String nameTerm,
@@ -75,11 +85,20 @@ public class OrganizationService {
         int realSize = pageSize == null ? 10 : pageSize;
         Pageable pageable = PageRequest.of(realPage, realSize);
 
-        EmployeeEntity chefById = employeeEntityRepository.getById(chefId);
+        List<OrganizationEntity> filtered = organizationEntityRepository
+                .findAll()
+                .parallelStream()
+                .filter(organization -> {
+                    boolean nameTermCheck = compareTerms(organization.getName(), nameTerm);
+                    boolean legalCheck = compareTerms(organization.getLegalAddress(), address);
+                    boolean physCheck = compareTerms(organization.getPhysicalAddress(), address);
+                    boolean chefCheck = chefId == null || chefId.equals(organization.getChefId());
+                    return nameTermCheck && legalCheck && physCheck && chefCheck;
+                }).collect(Collectors.toList());
 
-        return organizationEntityRepository.
-                findOrganizationEntitiesByNameContainingAndPhysicalAddressContainingAndLegalAddressContainingAndChef(
-                        nameTerm, address, address, chefById, pageable);
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), filtered.size());
+        return new PageImpl<>(filtered.subList(start, end), pageable, filtered.size());
     }
 
     public OrganizationEntity getOrganizationById(Long id) {
@@ -155,6 +174,7 @@ public class OrganizationService {
             }
             byId.setChefId(newChef.getId());
         }
-        return organizationEntityRepository.save(byId);
+        OrganizationEntity save = organizationEntityRepository.save(byId);
+        return save;
     }
 }

@@ -3,6 +3,7 @@ package ru.dromran.testtz.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,10 @@ import ru.dromran.testtz.exception.NotFoundException;
 import ru.dromran.testtz.repository.DepartmentEntityRepository;
 import ru.dromran.testtz.repository.EmployeeEntityRepository;
 import ru.dromran.testtz.repository.OrganizationEntityRepository;
+
+import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
 
 import static ru.dromran.testtz.constants.RoleConstants.ADMIN_ROLE;
 
@@ -73,6 +78,11 @@ public class DepartmentService {
 
     }
 
+    private boolean compareTerms(String string, String subString) {
+        String toCheck = subString == null ? "" : subString.toLowerCase(Locale.ROOT);
+        return string.toLowerCase(Locale.ROOT).contains(toCheck) || toCheck.contains(string.toLowerCase(Locale.ROOT));
+    }
+
     public Page<DepartmentEntity> findDepartments(Integer page,
                                                   Integer size,
                                                   String nameTerm,
@@ -82,11 +92,18 @@ public class DepartmentService {
         int realSize = size == null ? 10 : size;
         Pageable pageable = PageRequest.of(realPage, realSize);
 
-        EmployeeEntity chef = employeeEntityRepository.getById(chefId);
-        OrganizationEntity organization = organizationEntityRepository.getById(organizationId);
-
-        return departmentEntityRepository.findDepartmentEntitiesByNameContainingAndOrganizationAndChef(nameTerm,
-                organization, chef, pageable);
+        List<DepartmentEntity> filtered = departmentEntityRepository
+                .findAll()
+                .parallelStream()
+                .filter(departmentEntity -> {
+                    boolean orgCheck = organizationId == null || departmentEntity.getOrganizationId().equals(organizationId);
+                    boolean chefCheck = chefId == null || departmentEntity.getChef().getId().equals(chefId);
+                    boolean termCheck = compareTerms(departmentEntity.getName(), nameTerm);
+                    return orgCheck && chefCheck && termCheck;
+                }).collect(Collectors.toList());
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), filtered.size());
+        return new PageImpl<>(filtered.subList(start, end), pageable, filtered.size());
     }
 
     public DepartmentEntity getDepartmentById(Long id) {

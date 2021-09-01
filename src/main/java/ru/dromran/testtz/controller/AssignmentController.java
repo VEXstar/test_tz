@@ -1,7 +1,12 @@
 package ru.dromran.testtz.controller;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
@@ -35,53 +40,61 @@ public class AssignmentController {
     }
 
     @GetMapping("")
-    private ResponseEntity<Page<AssignmentEntity>> findAssignments(@RequestParam(required = false) Integer pageSize,
-                                                                   @RequestParam(required = false) Integer pageSkip,
-                                                                   @RequestParam(required = false) String textTerm,
-                                                                   @RequestParam(required = false) Long executorId,
-                                                                   @RequestParam(required = false) LocalDateTime fromDeadLine,
-                                                                   @RequestParam(required = false) LocalDateTime toDeadline,
-                                                                   @RequestParam(required = false) String typeTerm,
-                                                                   @RequestParam(required = false) Long authorId) {
+    public ResponseEntity<Page<AssignmentEntity>> findAssignments(@RequestParam(required = false) Integer pageSize,
+                                                                  @RequestParam(required = false) Integer pageSkip,
+                                                                  @RequestParam(required = false) String textTerm,
+                                                                  @RequestParam(required = false) Long executorId,
+                                                                  @RequestParam(required = false)
+                                                                  @JsonDeserialize(using = LocalDateTimeDeserializer.class)
+                                                                  @JsonSerialize(using = LocalDateTimeSerializer.class)
+                                                                  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+                                                                          LocalDateTime fromDeadLine,
+                                                                  @RequestParam(required = false)
+                                                                  @JsonDeserialize(using = LocalDateTimeDeserializer.class)
+                                                                  @JsonSerialize(using = LocalDateTimeSerializer.class)
+                                                                  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+                                                                          LocalDateTime toDeadline,
+                                                                  @RequestParam(required = false) String typeTerm,
+                                                                  @RequestParam(required = false) Long authorId) {
         return ResponseEntity.ok(assignmentService.findAssignment(pageSize,
                 pageSkip, textTerm, executorId, fromDeadLine, toDeadline, typeTerm, authorId));
     }
 
     @PutMapping("/{id}")
-    private ResponseEntity<AssignmentEntity> updateAssignment(@PathVariable("id") Long id,
-                                                              @RequestBody @Valid AssignmentFormDTO assignmentFormDTO) {
+    public ResponseEntity<AssignmentEntity> updateAssignment(@PathVariable("id") Long id,
+                                                             @RequestBody @Valid AssignmentFormDTO assignmentFormDTO) {
         return ResponseEntity.ok(assignmentService.updateAssignment(id, assignmentFormDTO));
 
     }
 
     @DeleteMapping("/{id}")
-    private ResponseEntity<ResponseMessageDTO> deleteAssignment(@PathVariable("id") Long id) {
+    public ResponseEntity<ResponseMessageDTO> deleteAssignment(@PathVariable("id") Long id) {
         return ResponseEntity.ok(assignmentService.deleteAssignment(id));
     }
 
     @PutMapping("/{id}/work")
-    private ResponseEntity<AssignmentEntity> toWorkAssignment(@PathVariable("id") Long id) {
+    public ResponseEntity<AssignmentEntity> toWorkAssignment(@PathVariable("id") Long id) {
         return ResponseEntity.ok(assignmentService.moveToWorkAssignment(id));
     }
 
     @PutMapping("/{id}/check")
-    private ResponseEntity<AssignmentEntity> executorCheckWork(@PathVariable("id") Long id,
-                                                               @RequestParam Boolean checkState) {
+    public ResponseEntity<AssignmentEntity> executorCheckWork(@PathVariable("id") Long id,
+                                                              @RequestParam Boolean checkState) {
         return ResponseEntity.ok(assignmentService.setExecutorCheckWork(id, checkState));
     }
 
     @PutMapping("/{id}/rework")
-    private ResponseEntity<AssignmentEntity> toReWork(@PathVariable("id") Long id) {
+    public ResponseEntity<AssignmentEntity> toReWork(@PathVariable("id") Long id) {
         return ResponseEntity.ok(assignmentService.moveToReWorkAssignment(id));
     }
 
     @PutMapping("/{id}/done")
-    private ResponseEntity<AssignmentEntity> doneAssignment(@PathVariable("id") Long id) {
+    public ResponseEntity<AssignmentEntity> doneAssignment(@PathVariable("id") Long id) {
         return ResponseEntity.ok(assignmentService.moveToDoneAssignment(id));
     }
 
     @PutMapping("/{id}/assign")
-    private ResponseEntity<AssignmentEntity> assignUserToTask(@PathVariable("id") Long id) {
+    public ResponseEntity<AssignmentEntity> assignUserToTask(@PathVariable("id") Long id) {
         return ResponseEntity.ok(assignmentService.assignUserToTask(id));
     }
 

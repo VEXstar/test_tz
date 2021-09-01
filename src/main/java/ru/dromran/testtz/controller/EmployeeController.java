@@ -34,7 +34,7 @@ public class EmployeeController {
                                                    @RequestParam(required = false) Integer pageSize,
                                                    @RequestParam(required = false) String lastNameTerm,
                                                    @RequestParam(required = false) String middleNameTerm,
-                                                   @RequestParam(required = false) Integer postId,
+                                                   @RequestParam(required = false) Long postId,
                                                    @RequestParam(required = false) Long departmentId,
                                                    @RequestParam(required = false) Long organizationId,
                                                    @RequestParam(required = false) String login) {

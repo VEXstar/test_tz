@@ -1,12 +1,21 @@
 package ru.dromran.testtz.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Data;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import org.hibernate.Hibernate;
 
 import javax.persistence.*;
 import java.io.Serializable;
+import java.util.Objects;
 
-@Data
+@Getter
+@Setter
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@RequiredArgsConstructor
 @Entity
 @Table(name = "employee")
 public class EmployeeEntity implements Serializable {
@@ -42,8 +51,17 @@ public class EmployeeEntity implements Serializable {
     private String password;
 
     @ManyToOne
+    @JsonIgnore
     @JoinTable(name = "employee_department", joinColumns = @JoinColumn(name = "employee_department_employee_id"),
             inverseJoinColumns = @JoinColumn(name = "employee_department_department_id"))
     private DepartmentEntity department;
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false;
+        EmployeeEntity employee = (EmployeeEntity) o;
+
+        return Objects.equals(id, employee.id);
+    }
 }

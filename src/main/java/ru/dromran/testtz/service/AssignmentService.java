@@ -14,6 +14,7 @@ import ru.dromran.testtz.entity.AssignmentEntity;
 import ru.dromran.testtz.entity.EmployeeEntity;
 import ru.dromran.testtz.entity.ExecutorAssignmentEntity;
 import ru.dromran.testtz.entity.OrganizationEntity;
+import ru.dromran.testtz.entity.composite.ExecutorAssignmentId;
 import ru.dromran.testtz.exception.BadRequestException;
 import ru.dromran.testtz.exception.ForbiddenRequestException;
 import ru.dromran.testtz.exception.NotFoundException;
@@ -91,11 +92,11 @@ public class AssignmentService {
         assignment.setType(formDTO.getType());
         assignment.setIsExecution(false);
         assignment.setIsControl(false);
+        assignment.setIsDone(false);
         AssignmentEntity save = assignmentEntityRepository.save(assignment);
         employeeEntitySet.forEach(executor -> {
             ExecutorAssignmentEntity eae = new ExecutorAssignmentEntity();
-            eae.setExecutorAssignmentId(save.getId());
-            eae.setExecutorUserId(executor.getId());
+            eae.setExecutorAssignmentId(new ExecutorAssignmentId(executor.getId(), save.getId()));
             executorAssignmentEntityRepository.save(eae);
         });
         return assignmentEntityRepository.getById(save.getId());
@@ -300,13 +301,6 @@ public class AssignmentService {
     private AssignmentEntity tryToSaveChanges(AssignmentEntity assignment) {
         EmployeeEntity userBySession = authService.getUserBySession();
 
-        if (!assignment.getIsControl()) {
-            BadRequestException badRequestException =
-                    new BadRequestException("Cant update assignment from non control state");
-            log.error("Try update state assignment", badRequestException);
-            throw badRequestException;
-        }
-
         if (!assignment.getAuthorId().equals(userBySession.getId())) {
             ForbiddenRequestException forbiddenRequestException =
                     new ForbiddenRequestException("Only author can update state this task");
@@ -326,7 +320,12 @@ public class AssignmentService {
         }
         assignment.setIsControl(false);
         assignment.setIsExecution(false);
-        return tryToSaveChanges(assignment);
+        AssignmentEntity rework = tryToSaveChanges(assignment);
+        rework.getExecutorAssignmentEntities().forEach(executorAssignmentEntity -> {
+            executorAssignmentEntity.setIsDone(false);
+            executorAssignmentEntityRepository.save(executorAssignmentEntity);
+        });
+        return rework;
     }
 
     public AssignmentEntity moveToDoneAssignment(Long id) {
@@ -336,9 +335,18 @@ public class AssignmentService {
             log.error("Cant found Assignment", notFoundException);
             throw notFoundException;
         }
+
+        if (!assignment.getIsControl()) {
+            BadRequestException badRequestException =
+                    new BadRequestException("Cant update assignment from non control state");
+            log.error("Try update state assignment", badRequestException);
+            throw badRequestException;
+        }
+
         assignment.setIsControl(false);
         assignment.setIsExecution(false);
         assignment.setIsDone(true);
+
         return tryToSaveChanges(assignment);
     }
 
@@ -364,7 +372,7 @@ public class AssignmentService {
                 .getExecutorAssignmentEntities()
                 .stream()
                 .filter(executorAssignmentEntity -> executorAssignmentEntity
-                        .getExecutorUserId()
+                        .getExecutorAssignmentId().getExecutorUserId()
                         .equals(userBySession.getId()))
                 .findFirst().orElse(null);
         if (executorAssignment != null) {
@@ -374,8 +382,9 @@ public class AssignmentService {
             throw badRequestException;
         }
         ExecutorAssignmentEntity executorAssignmentEntity = new ExecutorAssignmentEntity();
-        executorAssignmentEntity.setExecutorAssignmentId(assignment.getId());
-        executorAssignmentEntity.setExecutorUserId(userBySession.getId());
+        executorAssignmentEntity.setExecutorAssignmentId(new ExecutorAssignmentId(userBySession.getId(),
+                assignment.getId()));
+        executorAssignmentEntity.setIsDone(false);
         executorAssignmentEntityRepository.save(executorAssignmentEntity);
 
         return assignmentEntityRepository.getById(assignment.getId());
